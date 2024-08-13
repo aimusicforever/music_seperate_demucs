@@ -1,0 +1,137 @@
+from concurrent.futures import thread
+from werkzeug.utils import secure_filename
+from flask import jsonify, make_response, send_file, send_from_directory
+import os
+from flask import Flask, request
+import zipfile
+import json
+import base64
+import demucs.api
+import shutil
+import time
+
+app = Flask(__name__)
+
+ALLOWED_EXTENSIONS = {"mp3" }
+
+
+
+@app.route('/seperate', methods=['POST'])
+def seperate():
+    
+    file = request.files['file']
+    
+    if file is None:
+        return jsonify({'error': 'No file part'})
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'})
+    
+    fileNameSplit = os.path.splitext(file.filename)
+    
+    fileExtension = fileNameSplit[-1][1:]
+    if fileExtension not in ALLOWED_EXTENSIONS:
+        return jsonify({'error': 'Invalid file type'})
+    
+    secureName = secure_filename(str(file.filename))
+    # print("secureName:", secureName)
+    
+    savePath = os.path.join('./separated/upload', secureName)
+    file.save(savePath)
+
+    # Use another model and segment:
+    # htdemucs_6s
+    # mdx_extra
+    separator = demucs.api.Separator(model="htdemucs_6s")
+
+    origin, separated = separator.separate_audio_file(savePath)
+    
+    # print("separated finish")
+    
+    # Remember to create the destination folder before calling `save_audio`
+    # Or you are likely to recieve `FileNotFoundError`
+    
+    outDir = os.path.join('./separated/', f"{int(time.time())}_{os.path.splitext(secureName)[0]}")
+    checkDir(outDir)
+    # print("outDir:", outDir)
+    fileList = []
+        
+    for sourceName in separated.keys():
+        path = os.path.join(outDir, f"{sourceName}.{fileExtension}")
+        print("sepeate path", path)
+        demucs.api.save_audio(separated[sourceName], path, samplerate=separator.samplerate)
+        fileList.append(path)
+        
+    zipPath = os.path.join(outDir, "result.zip")
+    file2zip(zipPath, fileList)
+    
+    # print("zipPath", zipPath)
+    
+    try:
+        return send_file(zipPath)
+    except Exception as e:
+        return jsonify({"code": "异常", "message": "{}".format(e)})
+
+
+def file2zip(zip_file_name: str, file_names: list):
+    
+    print("file_names", file_names)
+    # 读取写入方式 ZipFile requires mode 'r', 'w', 'x', or 'a'
+    # 压缩方式  ZIP_STORED： 存储； ZIP_DEFLATED： 压缩存储
+    with zipfile.ZipFile(zip_file_name, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+        for fn in file_names:
+            parent_path, name = os.path.split(fn)
+            zf.write(fn, arcname=name)
+
+
+def audio_to_base64(audio_path):
+    with open(audio_path, "rb") as audio_file:
+        audio_data = audio_file.read()
+        base64_data = base64.b64encode(audio_data)
+        
+        base64_data = base64_data.decode('utf-8')
+        return base64_data
+ 
+
+def base64_to_audio(base64_path, output_path):
+    
+    with open(base64_path, "r") as base64_file:
+        base64_data = base64_file.read()
+    audio_data = base64.b64decode(base64_data)
+    with open(output_path, "wb") as audio_file:
+        audio_file.write(audio_data)
+        audio_file.close()
+
+def  checkDir(output_dir):
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+        
+    os.makedirs(output_dir)
+
+
+
+if __name__ == '__main__':
+    # 加上`host='0.0.0.0'`，即可以让你的服务监听所有公网ip，而不是只有本地请求才能访问
+    app.run(port=50000, host='0.0.0.0')
+#     zipFile()
+    # hello_world()
+    
+    # audio_path = f"{os.getcwd()}/music/seperate/test.mp3"
+    # base64_text_path = f"{os.getcwd()}/music/seperate/base_54.txt"
+    # base64_aidio_path = f"{os.getcwd()}/music/seperate/base_64_test_hongyan.mp3"
+    # base_64 = audio_to_base64(audio_path, base64_text_path) 
+    # base64_to_audio(base64_text_path, base64_aidio_path)
+    # seperate()
+    
+    # outDir = os.path.join('./separated/', "1723510088_-_")
+    # zipPath = os.path.join(outDir, "result.zip")
+    
+    
+    # fileList = []
+    # for sourceName in os.listdir(outDir):
+    #     path = os.path.join(outDir, sourceName)
+    #     fileList.append(path)
+    # print(os.listdir(outDir))
+    
+    # file2zip(zipPath, fileList)
+    # print(demucs.api.list_models())
+    
