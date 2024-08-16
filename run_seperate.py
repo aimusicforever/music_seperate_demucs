@@ -9,6 +9,10 @@ import base64
 import demucs.api
 import shutil
 import time
+import requests
+from tools import file_util
+
+
 
 app = Flask(__name__)
 
@@ -33,9 +37,12 @@ def seperate():
         return jsonify({'error': 'Invalid file type'})
     
     secureName = secure_filename(str(file.filename))
-    # print("secureName:", secureName)
+    print("secureName:", secureName)
+    
+    file_util.checkDir('./separated/upload')
     
     savePath = os.path.join('./separated/upload', secureName)
+    
     file.save(savePath)
 
     # Use another model and segment:
@@ -45,13 +52,13 @@ def seperate():
 
     origin, separated = separator.separate_audio_file(savePath)
     
-    # print("separated finish")
+    print("separated finish")
     
     # Remember to create the destination folder before calling `save_audio`
     # Or you are likely to recieve `FileNotFoundError`
     
     outDir = os.path.join('./separated/', f"{int(time.time())}_{os.path.splitext(secureName)[0]}")
-    checkDir(outDir)
+    file_util.createNewDir(outDir)
     # print("outDir:", outDir)
     fileList = []
         
@@ -60,11 +67,13 @@ def seperate():
         print("sepeate path", path)
         demucs.api.save_audio(separated[sourceName], path, samplerate=separator.samplerate)
         fileList.append(path)
-        
+            
     zipPath = os.path.join(outDir, "result.zip")
     file2zip(zipPath, fileList)
     
-    # print("zipPath", zipPath)
+    print("zipPath", zipPath)
+    
+    os.remove(savePath)
     
     try:
         return send_file(zipPath)
@@ -101,37 +110,10 @@ def base64_to_audio(base64_path, output_path):
         audio_file.write(audio_data)
         audio_file.close()
 
-def  checkDir(output_dir):
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-        
-    os.makedirs(output_dir)
-
-
 
 if __name__ == '__main__':
     # 加上`host='0.0.0.0'`，即可以让你的服务监听所有公网ip，而不是只有本地请求才能访问
-    app.run(port=50000, host='0.0.0.0')
+    app.run(port=40000, host='0.0.0.0')
 #     zipFile()
-    # hello_world()
-    
-    # audio_path = f"{os.getcwd()}/music/seperate/test.mp3"
-    # base64_text_path = f"{os.getcwd()}/music/seperate/base_54.txt"
-    # base64_aidio_path = f"{os.getcwd()}/music/seperate/base_64_test_hongyan.mp3"
-    # base_64 = audio_to_base64(audio_path, base64_text_path) 
-    # base64_to_audio(base64_text_path, base64_aidio_path)
-    # seperate()
-    
-    # outDir = os.path.join('./separated/', "1723510088_-_")
-    # zipPath = os.path.join(outDir, "result.zip")
-    
-    
-    # fileList = []
-    # for sourceName in os.listdir(outDir):
-    #     path = os.path.join(outDir, sourceName)
-    #     fileList.append(path)
-    # print(os.listdir(outDir))
-    
-    # file2zip(zipPath, fileList)
     # print(demucs.api.list_models())
     
