@@ -12,17 +12,24 @@ import time
 import requests
 from tools import file_util
 
-
+#start cmd
+#uwsgi --ini start.ini
 
 app = Flask(__name__)
 
-ALLOWED_EXTENSIONS = {"mp3" }
+ALLOWED_EXTENSIONS = {"mp3", "wav", "flac" , "aac"}
 
+# @app.route('/', methods=['GET', 'POST'])
+# def index():
+#     print("=============")
+#     return "Hello World!"
 
 
 @app.route('/seperate', methods=['POST'])
 def seperate():
     
+    
+    print("start seperate")
     file = request.files['file']
     
     if file is None:
@@ -74,7 +81,6 @@ def seperate():
     print("zipPath", zipPath)
     
     os.remove(savePath)
-    
     try:
         return send_file(zipPath)
     except Exception as e:
@@ -110,10 +116,12 @@ def base64_to_audio(base64_path, output_path):
         audio_file.write(audio_data)
         audio_file.close()
 
+# app.run(port=40001, host='0.0.0.0')
 
-if __name__ == '__main__':
-    # 加上`host='0.0.0.0'`，即可以让你的服务监听所有公网ip，而不是只有本地请求才能访问
-    app.run(port=40000, host='0.0.0.0')
+# if __name__ == '__main__':
+#     # 加上`host='0.0.0.0'`，即可以让你的服务监听所有公网ip，而不是只有本地请求才能访问
+#     print("run=========")
+#     app.run(port=40000, host='0.0.0.0')
 #     zipFile()
     # print(demucs.api.list_models())
     
