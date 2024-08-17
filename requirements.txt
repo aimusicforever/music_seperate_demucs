@@ -17,6 +17,9 @@ torchaudio>=0.8,<2.2
 tqdm
 treetable
 soundfile>=0.10.3
-flask
-uwsgi
+flask>=3.0.3
+uwsgi>=2.0.21
+werkzeug
+requests
+
 
