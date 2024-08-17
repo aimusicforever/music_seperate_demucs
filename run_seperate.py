@@ -11,6 +11,7 @@ import shutil
 import time
 import requests
 from tools import file_util
+from tools import time_util
 
 #start cmd
 #uwsgi --ini start.ini
@@ -19,17 +20,22 @@ app = Flask(__name__)
 
 ALLOWED_EXTENSIONS = {"mp3", "wav", "flac" , "aac"}
 
-# @app.route('/', methods=['GET', 'POST'])
-# def index():
-#     print("=============")
-#     return "Hello World!"
+    # Use another model and segment:
+    # htdemucs_6s
+    # mdx_extra
+separator = demucs.api.Separator(model="htdemucs_6s")
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    print("=============")
+    return "Hello World!"
 
 
 @app.route('/seperate', methods=['POST'])
 def seperate():
     
     
-    print("start seperate")
+    print("start time ==", time_util.get_current_time())
     file = request.files['file']
     
     if file is None:
@@ -52,14 +58,10 @@ def seperate():
     
     file.save(savePath)
 
-    # Use another model and segment:
-    # htdemucs_6s
-    # mdx_extra
-    separator = demucs.api.Separator(model="htdemucs_6s")
-
+    # separator.samplerate = 11100
     origin, separated = separator.separate_audio_file(savePath)
     
-    print("separated finish")
+    print("separator.samplerate===", separator.samplerate)
     
     # Remember to create the destination folder before calling `save_audio`
     # Or you are likely to recieve `FileNotFoundError`
@@ -69,6 +71,8 @@ def seperate():
     # print("outDir:", outDir)
     fileList = []
         
+    
+    
     for sourceName in separated.keys():
         path = os.path.join(outDir, f"{sourceName}.{fileExtension}")
         print("sepeate path", path)
@@ -81,6 +85,8 @@ def seperate():
     print("zipPath", zipPath)
     
     os.remove(savePath)
+    
+    print("finish time ==", time_util.get_current_time())
     try:
         return send_file(zipPath)
     except Exception as e:
