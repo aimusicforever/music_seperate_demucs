@@ -15,6 +15,7 @@ from tools import time_util
 
 #start cmd
 #uwsgi --ini start.ini
+# conda install uwsgi -c conda-forge  
 
 app = Flask(__name__)
 
