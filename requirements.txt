@@ -18,3 +18,5 @@ tqdm
 treetable
 soundfile>=0.10.3
 flask
+uwsgi
+
