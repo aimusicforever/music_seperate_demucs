@@ -31,6 +31,11 @@ def index():
     print("=============")
     return "Hello World!"
 
+@app.route('/download', methods=['GET'])
+def download():
+    print("=============")
+    return send_file("./result.zip")
+
 
 @app.route('/seperate', methods=['POST'])
 def seperate():
