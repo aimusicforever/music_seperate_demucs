@@ -1,6 +1,6 @@
 from concurrent.futures import thread
 from werkzeug.utils import secure_filename
-from flask import jsonify, make_response, send_file, send_from_directory
+from flask import jsonify, make_response, redirect, send_file, send_from_directory
 import os
 from flask import Flask, request
 import zipfile
@@ -25,6 +25,40 @@ ALLOWED_EXTENSIONS = {"mp3", "wav", "flac" , "aac"}
     # htdemucs_6s
     # mdx_extra
 separator = demucs.api.Separator(model="htdemucs_6s")
+
+@app.route('/fetch_lyrcs', methods=['POST'])
+def fetch_lyrcs():
+    print("=======fetch_lyrc======")
+    lyrcs = "http://127.0.0.1:50000/fetch_file_lyrcs"
+    
+    
+    file = request.files['file']
+    
+    if file is None:
+        return jsonify({"status": "fail", "message":"No file part"})
+    if file.filename == '':
+        return jsonify({"status": "fail", "message":"No file selected"})
+    
+    secureName = f"{int(time.time())}_{secure_filename(str(file.filename))}"
+    print("secureName:", secureName)
+
+    
+    saveDir = os.path.join(os.getcwd(), 'separated/lyrcs')
+    print("saveDir", saveDir)
+    file_util.checkDir(saveDir)
+    
+    savePath = os.path.join(saveDir, secureName)
+    
+    print("savePath:", savePath)
+    file.save(savePath)
+    
+    params = {
+    'path':savePath,
+    }
+    res = requests.get(url=lyrcs,params=params)
+    
+    res = res.text.encode('utf-8').decode('unicode_escape')
+    return res
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -98,7 +132,7 @@ def seperate():
         return result
     except Exception as e:
         return jsonify({"status": "异常", "message": "{}".format(e)})
-
+    
 
 def file2zip(zip_file_name: str, file_names: list):
     
