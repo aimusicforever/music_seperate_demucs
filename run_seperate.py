@@ -33,8 +33,10 @@ def index():
 
 @app.route('/download', methods=['GET'])
 def download():
-    print("=============")
-    return send_file("./result.zip")
+    path = request.args.get("path")
+    file_path = os.path.join('./separated/', path)
+    print("======file_path=======", file_path)
+    return send_file(file_path)
 
 
 @app.route('/seperate', methods=['POST'])
@@ -72,29 +74,28 @@ def seperate():
     # Remember to create the destination folder before calling `save_audio`
     # Or you are likely to recieve `FileNotFoundError`
     
-    outDir = os.path.join('./separated/', f"{int(time.time())}_{os.path.splitext(secureName)[0]}")
+    subDir = f"{int(time.time())}_{os.path.splitext(secureName)[0]}"
+    outDir = os.path.join('./separated/', subDir)
     file_util.createNewDir(outDir)
     # print("outDir:", outDir)
-    fileList = []
         
-    
+    data = {}
+    result = {
+        "status": "success",
+        "data":data
+    }
     
     for sourceName in separated.keys():
         path = os.path.join(outDir, f"{sourceName}.{fileExtension}")
         print("sepeate path", path)
         demucs.api.save_audio(separated[sourceName], path, samplerate=separator.samplerate)
-        fileList.append(path)
-            
-    zipPath = os.path.join(outDir, "result.zip")
-    file2zip(zipPath, fileList)
-    
-    print("zipPath", zipPath)
+        data[sourceName] = subDir + "/" + f"{sourceName}.{fileExtension}"
     
     os.remove(savePath)
     
     print("finish time ==", time_util.get_current_time())
     try:
-        return send_file(zipPath)
+        return result
     except Exception as e:
         return jsonify({"code": "异常", "message": "{}".format(e)})
 
