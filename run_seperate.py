@@ -47,9 +47,9 @@ def seperate():
     file = request.files['file']
     
     if file is None:
-        return jsonify({'error': 'No file part'})
+        return jsonify({"status": "fail", "message":"No file part"})
     if file.filename == '':
-        return jsonify({'error': 'No file selected'})
+        return jsonify({"status": "fail", "message":"No file selected"})
     
     fileNameSplit = os.path.splitext(file.filename)
     
@@ -97,7 +97,7 @@ def seperate():
     try:
         return result
     except Exception as e:
-        return jsonify({"code": "异常", "message": "{}".format(e)})
+        return jsonify({"status": "异常", "message": "{}".format(e)})
 
 
 def file2zip(zip_file_name: str, file_names: list):
