@@ -14,8 +14,15 @@ def launch():
                         timeout=100000)
 
 
+def start():
+    local_url = "http://127.0.0.1:40000"
+
+    res = requests.get(url=local_url)
+    
+    print("res:", res.text)
+
 if __name__ == '__main__':
-    launch()
+    start()
     
 
 # @app.route("/")
