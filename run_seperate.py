@@ -68,6 +68,10 @@ def index():
 @app.route('/download', methods=['GET'])
 def download():
     path = request.args.get("path")
+    
+    if path is None or path is "":
+        return jsonify({"status": "fail", "message":"path is none or null"})
+    
     file_path = os.path.join('./separated/', path)
     print("======file_path=======", file_path)
     return send_file(file_path)
@@ -77,7 +81,7 @@ def download():
 def seperate():
     
     
-    print("start time ==", time_util.get_current_time())
+    print("seperate start time ==", time_util.get_current_time())
     file = request.files['file']
     
     if file is None:
@@ -127,7 +131,7 @@ def seperate():
     
     os.remove(savePath)
     
-    print("finish time ==", time_util.get_current_time())
+    print("seperate finish time ==", time_util.get_current_time())
     try:
         return result
     except Exception as e:
