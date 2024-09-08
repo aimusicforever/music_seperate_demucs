@@ -1,0 +1,24 @@
+server {
+        
+        listen 40000;  # 监听端口
+
+        # root /usr/share/nginx/html;
+        root /root/music_seperate_demucs;      # flask项目根路径
+        
+
+        # Make site accessible from http://localhost/
+        # server_name localhost;
+        server_name 172.17.0.8;    # 公网ip或已解析ip的域名
+
+        location / {
+                # First attempt to serve request as file, then
+                # as directory, then fall back to displaying a 404.
+                # try_files $uri $uri/ =404;
+                # Uncomment to enable naxsi on this location
+                # include /etc/nginx/naxsi.rules
+
+                include uwsgi_params;   # 使用nginx内置的uwsgi配置参数文件
+                uwsgi_pass 127.0.0.1:40000;   # 转发请求到该地址端口  
+                uwsgi_param UWSGI_SCRIPT run_seperate:app;   # 调用的脚本名称和application变量名
+        }
+}
