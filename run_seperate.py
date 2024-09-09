@@ -42,6 +42,8 @@ EVNET_TRANSFER = "transfer"
 TokenKey = "XX-Token"
 DeviceTypeKey = "XX-Device-Type"
 TaskKey = "key"
+workNum = 10
+threadPool = ThreadPoolExecutor(max_workers=workNum)
 
 
 app = Flask(__name__)
@@ -102,7 +104,7 @@ def download():
         return jsonify({"status": "fail", "message":"path is none or null"})
     
     file_path = os.path.join('./separated/', path)
-    print("======file_path=======", file_path)
+    print("======download  file_path=======", file_path)
     return send_file(file_path)
 
 
@@ -117,7 +119,7 @@ def separate():
     loginToken =  request.headers[TokenKey]
     device_type =  request.headers[DeviceTypeKey]
     
-    print(f"{taskKey} {loginToken}  {device_type}")
+    print(f"taskKey:{taskKey} loginToken:{loginToken}  device_type:{device_type}")
         
     
     if file is None:
@@ -132,7 +134,7 @@ def separate():
         return jsonify({'error': 'Invalid file type'})
     
     secureName = (str(file.filename))
-    print("secureName:", secureName)
+    print("separate file name:", secureName)
     
     file_util.checkDir('./separated/upload')
     savePath = os.path.join('./separated/upload', secureName)
@@ -157,8 +159,7 @@ def separate():
     }
     notifyStatus(params, headers)
     
-    workNum = 1
-    ThreadPoolExecutor(max_workers=workNum).submit(separate_file, savePath, taskKey, loginToken, device_type)
+    threadPool.submit(separate_file, savePath, taskKey, loginToken, device_type)
     
     return uploadResult
     
@@ -191,7 +192,6 @@ def separate_file(savePath, taskKey, loginToken, device_type):
     dataString = json.dumps(data)
     print("seperate finish time ==", time_util.get_current_time())
     
-    print(f"data === {data} === {dataString}")
     params = {
             'key':taskKey,
             'status':STATUS_FINISH_PROCESS,
