@@ -49,7 +49,11 @@ threadPool = ThreadPoolExecutor(max_workers=workNum)
 app = Flask(__name__)
 
 ALLOWED_EXTENSIONS = {"mp3", "wav", "flac" , "aac"}
-manager_service_address = "https://music.openai80.com/api/music/music/status"
+
+manager_service_host = "https://music.openai80.com"
+update_status_addr = "/api/music/music/status"
+manager_service_address = manager_service_host + update_status_addr
+local_lyrcs_addr = "http://127.0.0.1:50000/fetch_file_lyrcs"
 
     # Use another model and segment:
     # htdemucs_6s
@@ -59,10 +63,13 @@ separator = demucs.api.Separator(model="htdemucs_6s")
 @app.route('/fetch_lyrcs', methods=['POST'])
 def fetch_lyrcs():
     print("=======fetch_lyrc======")
-    lyrcs_url = "http://127.0.0.1:50000/fetch_file_lyrcs"
     
     
-    file = requests.files['file']
+    file = request.files['file']
+    taskKey = request.form.get(TaskKey)
+    
+    loginToken =  request.headers[TokenKey]
+    device_type =  request.headers[DeviceTypeKey]
     
     if file is None:
         return jsonify({"status": "fail", "message":"No file part"})
@@ -74,7 +81,6 @@ def fetch_lyrcs():
 
     
     saveDir = os.path.join(os.getcwd(), 'separated/lyrcs')
-    print("saveDir", saveDir)
     file_util.checkDir(saveDir)
     
     savePath = os.path.join(saveDir, secureName)
@@ -83,13 +89,54 @@ def fetch_lyrcs():
     file.save(savePath)
     
     params = {
-    'path':savePath,
+            'key':taskKey,
+            'status':STATUS_START_PROCESS,
+            'event':EVNET_LYRIC,
+            'data':""
+        }
+    
+    headers = {
+            TokenKey: loginToken,
+            DeviceTypeKey: device_type,
+        }
+    notifyStatus(params, headers)
+    
+    threadPool.submit(fetch_lyrcs_file, savePath, taskKey, loginToken, device_type)
+    uploadResult = {
+        "code": 1,
+        "msg":"upload success",
+        "data":"",
     }
     
-    res = requests.get(url=lyrcs_url,params=params)
+    return uploadResult
+    
+
+def fetch_lyrcs_file(savePath, taskKey, loginToken, device_type):
+    
+    params = {
+        'path':savePath
+        }
+    
+    res = requests.get(url=local_lyrcs_addr,params=params)
     
     res = res.text.encode('utf-8').decode('unicode_escape')
-    return res
+    
+    params = {
+            'key':taskKey,
+            'status':STATUS_FINISH_PROCESS,
+            'event':EVNET_LYRIC,
+            'data':res
+        }
+    
+    print("lyrcs result:", res)
+    
+    headers = {
+            TokenKey: loginToken,
+            DeviceTypeKey: device_type,
+        }
+    notifyStatus(params, headers)
+
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -208,7 +255,6 @@ def separate_file(savePath, taskKey, loginToken, device_type):
     
 
 def notifyStatus(params, headers):
-    
     res = requests.get(url=manager_service_address,params=params, headers=headers)
     print(f"manager response ===={res.text}")
     
