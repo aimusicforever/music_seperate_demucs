@@ -1,5 +1,6 @@
 
 
+import base64
 import os
 import shutil
 import zipfile
@@ -48,3 +49,11 @@ def base64_to_audio(base64_path, output_path):
         audio_file.write(audio_data)
         audio_file.close()
 
+def saveToFile(content, file_path):
+    # 打开文件
+    file = open(file_path, "w")
+    # 要保存的字符串
+    # 写入文件
+    file.write(content)
+    # 关闭文件
+    file.close()

@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 import threading
 # from werkzeug.utils import secure_filename
 from flask import jsonify, make_response, redirect, request, send_file, send_from_directory
@@ -50,6 +51,9 @@ app = Flask(__name__)
 
 ALLOWED_EXTENSIONS = {"mp3", "wav", "flac" , "aac"}
 
+SEPARATE_SUB_DIR = "separated"
+LYRIC_SUB_DIR = "separated/lyrcs"
+
 manager_service_host = "https://music.openai80.com"
 update_status_addr = "/api/music/music/status"
 manager_service_address = manager_service_host + update_status_addr
@@ -59,6 +63,12 @@ local_lyrcs_addr = "http://127.0.0.1:50000/fetch_file_lyrcs"
     # htdemucs_6s
     # mdx_extra
 separator = demucs.api.Separator(model="htdemucs_6s")
+
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    print("=============")
+    return "Hello World!"
 
 @app.route('/fetch_lyrcs', methods=['POST'])
 def fetch_lyrcs():
@@ -80,10 +90,11 @@ def fetch_lyrcs():
     print("secureName:", secureName)
 
     
-    saveDir = os.path.join(os.getcwd(), 'separated/lyrcs')
-    file_util.checkDir(saveDir)
+    saveDir = os.path.join(LYRIC_SUB_DIR, f"{int(time.time())}_{threading.current_thread().ident}")
+    fullDir = os.path.join(os.getcwd(), saveDir)
+    file_util.checkDir(fullDir)
     
-    savePath = os.path.join(saveDir, secureName)
+    savePath = os.path.join(fullDir, secureName)
     
     print("savePath:", savePath)
     file.save(savePath)
@@ -101,34 +112,50 @@ def fetch_lyrcs():
         }
     notifyStatus(params, headers)
     
-    threadPool.submit(fetch_lyrcs_file, savePath, taskKey, loginToken, device_type)
+    threadPool.submit(fetch_lyrcs_file, saveDir,secureName, taskKey, loginToken, device_type)
     uploadResult = {
         "code": 1,
         "msg":"upload success",
         "data":"",
     }
+    # class Resp<T>(var code: Int = 0, var msg: String = "", var data: T? = null)
     
     return uploadResult
     
 
-def fetch_lyrcs_file(savePath, taskKey, loginToken, device_type):
+def fetch_lyrcs_file(saveDir, secureName, taskKey, loginToken, device_type):
+    
     
     params = {
-        'path':savePath
+        'path':os.path.join(os.getcwd(), saveDir, secureName)
         }
     
-    res = requests.get(url=local_lyrcs_addr,params=params)
     
+    res = requests.get(url=local_lyrcs_addr,params=params)
     res = res.text.encode('utf-8').decode('unicode_escape')
+    
+    name = "lyric.txt"
+    lyricPath = os.path.join(os.getcwd(), saveDir, name)
+    file_util.saveToFile(res, lyricPath)
+    print(f"lyricfile: {lyricPath}")
+    
+
+    data = {
+        "lyric":os.path.join(saveDir, name)
+    }
     
     params = {
             'key':taskKey,
             'status':STATUS_FINISH_PROCESS,
             'event':EVNET_LYRIC,
-            'data':res
+            'data':json.dumps(data)
         }
     
-    print("lyrcs result:", res)
+    
+    
+    print("lyrcs result:", json.dumps(data))
+    
+    print("loginToken:", loginToken, "key:", taskKey)
     
     headers = {
             TokenKey: loginToken,
@@ -137,12 +164,6 @@ def fetch_lyrcs_file(savePath, taskKey, loginToken, device_type):
     notifyStatus(params, headers)
 
 
-
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    print("=============")
-    return "Hello World!"
-
 @app.route('/download', methods=['GET'])
 def download():
     path = request.args.get("path")
@@ -150,7 +171,7 @@ def download():
     if path is None:
         return jsonify({"status": "fail", "message":"path is none or null"})
     
-    file_path = os.path.join('./separated/', path)
+    file_path = os.path.join(os.getcwd(), path)
     print("======download  file_path=======", file_path)
     return send_file(file_path)
 
@@ -201,8 +222,8 @@ def separate():
         }
     
     headers = {
-        "XX-Token": loginToken,
-        "XX-Device-Type": device_type,
+        TokenKey: loginToken,
+        DeviceTypeKey: device_type,
     }
     notifyStatus(params, headers)
     
@@ -221,8 +242,9 @@ def separate_file(savePath, taskKey, loginToken, device_type):
     
     print("separator.samplerate===", separator.samplerate)
     
-    subDir = f"{int(time.time())}"
-    outDir = os.path.join('./separated/', subDir)
+    
+    subDir = SEPARATE_SUB_DIR + os.path.sep + f"{int(time.time())}_{threading.current_thread().ident}"
+    outDir = os.path.join(os.getcwd(), subDir)
     file_util.createNewDir(outDir)
     # print("outDir:", outDir)
         
@@ -231,7 +253,7 @@ def separate_file(savePath, taskKey, loginToken, device_type):
         path = os.path.join(outDir, f"{sourceName}.{fileExtension}")
         print("sepeate path", path)
         demucs.api.save_audio(separated[sourceName], path, samplerate=separator.samplerate)
-        data[sourceName] = subDir + "/" + f"{sourceName}.{fileExtension}"
+        data[sourceName] = subDir + os.path.sep + f"{sourceName}.{fileExtension}"
     
     os.remove(savePath)
     
@@ -283,5 +305,6 @@ if __name__ == '__main__':
     # tt = threading.Thread(target=task)
     # tt.start()
     # print('end')
+    # print(os.path.join(LYRIC_SUB_DIR,  f"{int(time.time())}_{threading.current_thread().name}"))
 
     
