@@ -57,7 +57,7 @@ LYRIC_SUB_DIR = "separated/lyrcs"
 manager_service_host = "https://music.openai80.com"
 update_status_addr = "/api/music/music/status"
 manager_service_address = manager_service_host + update_status_addr
-local_lyrcs_addr = "http://127.0.0.1:50000/fetch_file_lyrcs"
+local_lyrics_addr = "http://127.0.0.1:50000/fetch_file_lyrics"
 
     # Use another model and segment:
     # htdemucs_6s
@@ -70,9 +70,9 @@ def index():
     print("=============")
     return "Hello World!"
 
-@app.route('/fetch_lyrcs', methods=['POST'])
-def fetch_lyrcs():
-    print("=======fetch_lyrc======")
+@app.route('/fetch_lyrics', methods=['POST'])
+def fetch_lyrics():
+    print("=======fetch_lyrics======")
     
     
     file = request.files['file']
@@ -112,7 +112,7 @@ def fetch_lyrcs():
         }
     notifyStatus(params, headers)
     
-    threadPool.submit(fetch_lyrcs_file, saveDir,secureName, taskKey, loginToken, device_type)
+    threadPool.submit(fetch_lyrics_file, saveDir,secureName, taskKey, loginToken, device_type)
     uploadResult = {
         "code": 1,
         "msg":"upload success",
@@ -123,7 +123,7 @@ def fetch_lyrcs():
     return uploadResult
     
 
-def fetch_lyrcs_file(saveDir, secureName, taskKey, loginToken, device_type):
+def fetch_lyrics_file(saveDir, secureName, taskKey, loginToken, device_type):
     
     
     params = {
@@ -131,7 +131,7 @@ def fetch_lyrcs_file(saveDir, secureName, taskKey, loginToken, device_type):
         }
     
     
-    res = requests.get(url=local_lyrcs_addr,params=params)
+    res = requests.get(url=local_lyrics_addr,params=params)
     res = res.text.encode('utf-8').decode('unicode_escape')
     
     name = "lyric.txt"
@@ -141,7 +141,7 @@ def fetch_lyrcs_file(saveDir, secureName, taskKey, loginToken, device_type):
     
 
     data = {
-        "lyric":os.path.join(saveDir, name)
+        "lyricsPath":os.path.join(saveDir, name)
     }
     
     params = {
