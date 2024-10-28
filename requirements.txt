@@ -18,8 +18,10 @@ tqdm
 treetable
 soundfile>=0.10.3
 flask>=3.0.3
+NumPy==1.26.4
 #uwsgi>=2.0.21
 werkzeug
 requests
+
 
 
