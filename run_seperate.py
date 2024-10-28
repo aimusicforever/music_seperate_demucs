@@ -15,6 +15,10 @@ import time
 from tools import file_util
 from tools import time_util
 import concurrent.futures
+import demucs.separate
+
+from dora.log import fatal
+import torch as th
 
 #start cmd
 #uwsgi --ini start.ini
@@ -43,6 +47,10 @@ EVNET_TRANSFER = "transfer"
 TokenKey = "XX-Token"
 DeviceTypeKey = "XX-Device-Type"
 TaskKey = "key"
+ModelKey = "model"
+TwoStemsKey = "two_stems"
+
+
 workNum = 10
 threadPool = ThreadPoolExecutor(max_workers=workNum)
 
@@ -60,8 +68,16 @@ manager_service_address = manager_service_host + update_status_addr
 local_lyrics_addr = "http://127.0.0.1:50000/fetch_file_lyrics"
 
     # Use another model and segment:
+    # htdemucs
+    # htdemucs_ft
     # htdemucs_6s
     # mdx_extra
+    # 
+
+MODEL_4 = "htdemucs"
+MODEL_6 = "htdemucs_6s"
+    
+
 separator = demucs.api.Separator(model="htdemucs_6s")
 
 
@@ -183,11 +199,14 @@ def separate():
     
     file = request.files['file']
     taskKey = request.form.get(TaskKey)
+    model = request.form.get(ModelKey, MODEL_6)
+    twoItem = request.form.get(TwoStemsKey, "")
+    
     
     loginToken =  request.headers[TokenKey]
     device_type =  request.headers[DeviceTypeKey]
     
-    print(f"taskKey:{taskKey} loginToken:{loginToken}  device_type:{device_type}")
+    print(f"taskKey:{taskKey} loginToken:{loginToken}  device_type:{device_type} model:{model} twoItem:{twoItem}")
         
     
     if file is None:
@@ -227,17 +246,18 @@ def separate():
     }
     notifyStatus(params, headers)
     
-    threadPool.submit(separate_file, savePath, taskKey, loginToken, device_type)
+    threadPool.submit(separate_file, savePath, taskKey, loginToken, model, twoItem, device_type)
     
     return uploadResult
     
 
-def separate_file(savePath, taskKey, loginToken, device_type):
+def separate_file(originPath, taskKey, loginToken, model, twoItem, device_type):
     # separator.samplerate = 11100
     
-    origin, separated = separator.separate_audio_file(savePath)
+    separator = demucs.api.Separator(model)
+    origin, separatedResult = separator.separate_audio_file(originPath)
     
-    secureName = os.path.basename(savePath)
+    secureName = os.path.basename(originPath)
     fileExtension = secureName.split(".")[1]
     
     print("separator.samplerate===", separator.samplerate)
@@ -249,17 +269,30 @@ def separate_file(savePath, taskKey, loginToken, device_type):
     # print("outDir:", outDir)
         
     data = {}
-    for sourceName in separated.keys():
+    
+    separateInfo = {}
+    if twoItem != "":
+        separateInfo[twoItem] = separatedResult.pop(twoItem)
+        
+        other_stem = th.zeros_like(next(iter(separatedResult.values())))
+        for i in separatedResult.values():
+            other_stem += i
+        separateInfo["other"] = other_stem
+    else:
+        separateInfo = separatedResult
+    
+    for sourceName in separateInfo.keys():
         path = os.path.join(outDir, f"{sourceName}.{fileExtension}")
         print("sepeate path", path)
-        demucs.api.save_audio(separated[sourceName], path, samplerate=separator.samplerate)
+        demucs.api.save_audio(separateInfo[sourceName], path, samplerate=separator.samplerate)
         data[sourceName] = subDir + os.path.sep + f"{sourceName}.{fileExtension}"
     
-    os.remove(savePath)
+    os.remove(originPath)
     
     
     dataString = json.dumps(data)
-    print("seperate finish time ==", time_util.get_current_time())
+    print("seperate finish time ==", time_util.get_current_time() )
+    print("separate data:", dataString)
     
     params = {
             'key':taskKey,
@@ -294,6 +327,9 @@ def task():
     return "66666"
 
 if __name__ == '__main__':
+    
+    # list = demucs.api.list_models()
+    # print("list model:", list)
 
     app.run(port=40000, host='0.0.0.0')
     # print('before')
@@ -306,5 +342,23 @@ if __name__ == '__main__':
     # tt.start()
     # print('end')
     # print(os.path.join(LYRIC_SUB_DIR,  f"{int(time.time())}_{threading.current_thread().name}"))
+    
+    # demucs.api.list_models()
+    
+    # Assume that your command is `demucs --mp3 --two-stems vocals -n mdx_extra "track with space.mp3"`
+    # The following codes are same as the command above:
+    
+    
+    
+    # fullDir = os.path.join(os.getcwd(), "hongyan.mp3")
+    # # filePath = f"track with {fullDir}"
+    
+    # filePath = "hongyan.mp3"
+    
+    # modelName = "htdemucs"
+    # stem = "drums"
+    # print(f"fullParh:{filePath}")
+    
+    # demucs.separate.main(["--mp3", "--two-stems", stem, "-n", modelName, filePath])
 
     
