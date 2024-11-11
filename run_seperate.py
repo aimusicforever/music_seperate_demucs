@@ -330,8 +330,12 @@ if __name__ == '__main__':
     
     # list = demucs.api.list_models()
     # print("list model:", list)
+    
+    device = "cuda" if th.cuda.is_available() else "cpu"
 
-    app.run(port=8080, host='0.0.0.0')
+    print("device is:", device)
+
+    # app.run(port=8080, host='0.0.0.0')
     # print('before')
     # ThreadPoolExecutor(1).submit(task)
     # concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
