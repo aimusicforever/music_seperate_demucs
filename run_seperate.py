@@ -1,7 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import threading
-# from werkzeug.utils import secure_filename
 from flask import jsonify, make_response, redirect, request, send_file, send_from_directory
 import os
 from flask import Flask
@@ -253,14 +252,15 @@ def separate():
 
 def separate_file(originPath, taskKey, loginToken, model, twoItem, device_type):
     # separator.samplerate = 11100
+    print("start separate file: " + originPath)
     
     separator = demucs.api.Separator(model)
     origin, separatedResult = separator.separate_audio_file(originPath)
     
+    print("finish separate file: " + originPath)
+    
     secureName = os.path.basename(originPath)
     fileExtension = secureName.split(".")[1]
-    
-    print("separator.samplerate===", separator.samplerate)
     
     
     subDir = SEPARATE_SUB_DIR + os.path.sep + f"{int(time.time())}_{threading.current_thread().ident}"
