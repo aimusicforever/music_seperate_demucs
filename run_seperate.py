@@ -206,18 +206,30 @@ def separate():
     device_type =  request.headers[DeviceTypeKey]
     
     print(f"taskKey:{taskKey} loginToken:{loginToken}  device_type:{device_type} model:{model} twoItem:{twoItem}")
-        
+    
+    uploadResult = {
+        "code": 1,
+        "msg":"upload success",
+        "data":"",
+    }
     
     if file is None:
-        return jsonify({"status": "fail", "message":"No file part"})
+        uploadResult["code"] = 0
+        uploadResult[msg] = "No file part"
+        return uploadResult
     if file.filename == '':
-        return jsonify({"status": "fail", "message":"No file selected"})
+        uploadResult["code"] = 0
+        uploadResult[msg] = "No file selected"
+        return uploadResult
     
     fileNameSplit = os.path.splitext(file.filename)
     
     fileExtension = fileNameSplit[-1][1:]
     if fileExtension not in ALLOWED_EXTENSIONS:
-        return jsonify({'error': 'Invalid file type'})
+        print("Invalid file type:", file.filename)
+        uploadResult["code"] = 0
+        uploadResult["msg"] = "err:Invalid file type"
+        return uploadResult
     
     secureName = (str(file.filename))
     print("separate file name:", secureName)
@@ -226,11 +238,7 @@ def separate():
     savePath = os.path.join('./separated/upload', secureName)
     file.save(savePath)
     
-    uploadResult = {
-        "code": 1,
-        "msg":"upload success",
-        "data":"",
-    }
+
     
     params = {
             'key':taskKey,
