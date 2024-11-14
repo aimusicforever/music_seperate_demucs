@@ -202,7 +202,7 @@ def separate():
     
     file = request.files['file']
     
-    isTest = True
+    isTest = False
         
     if isTest:
         taskKey = "test"
@@ -347,6 +347,7 @@ def task():
     return "66666"
 
 def scheduleDeleteOldFileTask():
+    # print("scheduleDeleteOldFileTask start")
     resulyPath = os.path.join(os.getcwd(), SEPARATE_RESULT_DIR)
     schedule.every().day.at("00:00").do(file_util.delete_old_items, target_directory= resulyPath)
     # schedule.every().minute.do(file_util.delete_old_items, target_directory= resulyPath)
@@ -358,7 +359,7 @@ def scheduleDeleteOldFileTask():
 
 
 
-scheduleDeleteOldFileTask()
+threadPool.submit(scheduleDeleteOldFileTask)
 
 if __name__ == '__main__':
     
@@ -368,7 +369,7 @@ if __name__ == '__main__':
     
     # modelName = "htdemucs"
     # stem = "drums"
-    # print(f"fullParh:{filePath}")
-    app.run(port=40000, host='0.0.0.0')
+    print(f"fullParh")
+    # app.run(port=40000, host='0.0.0.0')
     
     # demucs.separate.main(["--mp3", "--two-stems", stem, "-n", modelName, filePath])
