@@ -1,9 +1,13 @@
 
 
 import base64
-import os
 import shutil
 import zipfile
+import os
+import time
+import schedule
+import shutil
+# import day_in_seconds 
 
 
 def  checkDir(output_dir):
@@ -57,3 +61,34 @@ def saveToFile(content, file_path):
     file.write(content)
     # 关闭文件
     file.close()
+
+
+
+def delete_old_items(target_directory):
+    
+    print("delete old files")
+    # 当前时间的时间戳
+    now = time.time()
+    # 一天前的时间戳
+    interval = 60
+    one_day_ago = now - interval 
+
+    # 遍历目标目录的所有子文件和子目录
+    for item_name in os.listdir(target_directory):
+        item_path = os.path.join(target_directory, item_name)
+        # 获取文件或目录的创建时间
+        item_creation_time = os.path.getctime(item_path)
+        
+        # 删除创建时间超过一天的文件或目录
+        if item_creation_time < one_day_ago:
+            try:
+                if os.path.isfile(item_path):
+                    os.remove(item_path)
+                    print(f"已删除文件: {item_path}")
+                elif os.path.isdir(item_path):
+                    # 删除目录及其所有内容
+                    shutil.rmtree(item_path)
+                    print(f"已删除目录: {item_path}")
+            except Exception as e:
+                print(f"删除 {item_path} 时出错: {e}")
+

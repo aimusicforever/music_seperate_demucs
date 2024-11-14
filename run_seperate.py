@@ -19,6 +19,10 @@ import demucs.separate
 from dora.log import fatal
 import torch as th
 
+import os
+import time
+import schedule
+
 #start cmd
 #uwsgi --ini start.ini
 # conda install uwsgi -c conda-forge  
@@ -59,6 +63,7 @@ app = Flask(__name__)
 ALLOWED_EXTENSIONS = {"mp3", "wav", "flac" , "aac"}
 
 SEPARATE_SUB_DIR = "separated"
+SEPARATE_RESULT_DIR = "separated/result"
 LYRIC_SUB_DIR = "separated/lyrcs"
 
 manager_service_host = "https://music.openai80.com"
@@ -78,7 +83,6 @@ MODEL_6 = "htdemucs_6s"
     
 
 separator = demucs.api.Separator(model="htdemucs_6s")
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -197,13 +201,21 @@ def separate():
     print("seperate start time ==", time_util.get_current_time())
     
     file = request.files['file']
-    taskKey = request.form.get(TaskKey)
-    model = request.form.get(ModelKey, MODEL_6)
-    twoItem = request.form.get(TwoStemsKey, "")
     
-    
-    loginToken =  request.headers[TokenKey]
-    device_type =  request.headers[DeviceTypeKey]
+    isTest = True
+        
+    if isTest:
+        taskKey = "test"
+        model = MODEL_6
+        twoItem = ""
+        loginToken = "666"
+        device_type = "android"
+    else:
+        taskKey = request.form.get(TaskKey)
+        model = request.form.get(ModelKey, MODEL_6)
+        twoItem = request.form.get(TwoStemsKey, "")
+        loginToken =  request.headers[TokenKey]
+        device_type =  request.headers[DeviceTypeKey]
     
     print(f"taskKey:{taskKey} loginToken:{loginToken}  device_type:{device_type} model:{model} twoItem:{twoItem}")
     
@@ -271,7 +283,7 @@ def separate_file(originPath, taskKey, loginToken, model, twoItem, device_type):
     fileExtension = secureName.split(".")[1]
     
     
-    subDir = SEPARATE_SUB_DIR + os.path.sep + f"{int(time.time())}_{threading.current_thread().ident}"
+    subDir = SEPARATE_RESULT_DIR + os.path.sep + f"{int(time.time())}_{threading.current_thread().ident}"
     outDir = os.path.join(os.getcwd(), subDir)
     file_util.createNewDir(outDir)
     # print("outDir:", outDir)
@@ -291,7 +303,7 @@ def separate_file(originPath, taskKey, loginToken, model, twoItem, device_type):
     
     for sourceName in separateInfo.keys():
         path = os.path.join(outDir, f"{sourceName}.{fileExtension}")
-        print("sepeate path", path)
+        print("sepeate path:", path)
         demucs.api.save_audio(separateInfo[sourceName], path, samplerate=separator.samplerate)
         data[sourceName] = subDir + os.path.sep + f"{sourceName}.{fileExtension}"
     
@@ -334,43 +346,29 @@ def task():
     print('Task executed end')
     return "66666"
 
+def scheduleDeleteOldFileTask():
+    resulyPath = os.path.join(os.getcwd(), SEPARATE_RESULT_DIR)
+    schedule.every().day.at("00:00").do(file_util.delete_old_items, target_directory= resulyPath)
+    # schedule.every().minute.do(file_util.delete_old_items, target_directory= resulyPath)
+
+    # 持续运行任务
+    while True:
+        schedule.run_pending()
+        time.sleep(3600 * 24)  # 每24小时检查一次
+
+
+
+scheduleDeleteOldFileTask()
+
 if __name__ == '__main__':
     
-    # list = demucs.api.list_models()
-    # print("list model:", list)
-    
-    device = "cuda" if th.cuda.is_available() else "cpu"
+    # 设置每天执行一次任务
+    # scheduleDeleteOldFileTask()
 
-    print("device is:", device)
-
-    # app.run(port=8080, host='0.0.0.0')
-    # print('before')
-    # ThreadPoolExecutor(1).submit(task)
-    # concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-    #     future = executor.submit(task)
-    #     print(f"future== {future}")
-    
-    # tt = threading.Thread(target=task)
-    # tt.start()
-    # print('end')
-    # print(os.path.join(LYRIC_SUB_DIR,  f"{int(time.time())}_{threading.current_thread().name}"))
-    
-    # demucs.api.list_models()
-    
-    # Assume that your command is `demucs --mp3 --two-stems vocals -n mdx_extra "track with space.mp3"`
-    # The following codes are same as the command above:
-    
-    
-    
-    # fullDir = os.path.join(os.getcwd(), "hongyan.mp3")
-    # # filePath = f"track with {fullDir}"
-    
-    # filePath = "hongyan.mp3"
     
     # modelName = "htdemucs"
     # stem = "drums"
     # print(f"fullParh:{filePath}")
+    app.run(port=40000, host='0.0.0.0')
     
     # demucs.separate.main(["--mp3", "--two-stems", stem, "-n", modelName, filePath])
-
-    
