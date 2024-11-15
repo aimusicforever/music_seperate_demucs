@@ -273,9 +273,10 @@ def separate_file(originPath, taskKey, loginToken, model, twoItem, device_type):
     
     secureName = os.path.basename(originPath)
     fileExtension = secureName.split(".")[1]
+    cleanName = secureName.split(".")[0]
     
     
-    subDir = SEPARATE_RESULT_DIR + os.path.sep + f"{int(time.time())}_{threading.current_thread().ident}"
+    subDir = SEPARATE_RESULT_DIR + os.path.sep + f"{cleanName}_{int(time.time())}_{threading.current_thread().ident}"
     outDir = os.path.join(os.getcwd(), subDir)
     file_util.createNewDir(outDir)
     # print("outDir:", outDir)
