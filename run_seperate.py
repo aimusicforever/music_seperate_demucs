@@ -193,7 +193,7 @@ def separate():
     
     file = request.files['file']
     
-    isTest = True
+    isTest = False
         
     if isTest:
         taskKey = "test"
@@ -362,7 +362,7 @@ if __name__ == '__main__':
     
     # modelName = "htdemucs"
     # stem = "drums"
-    # print(f"fullParh")
-    app.run(port=40000, host='0.0.0.0')
+    print(f"fullParh")
+    # app.run(port=40000, host='0.0.0.0')
     
     # demucs.separate.main(["--mp3", "--two-stems", stem, "-n", modelName, filePath])
