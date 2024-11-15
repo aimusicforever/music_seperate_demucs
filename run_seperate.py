@@ -1,27 +1,19 @@
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
-import threading
-from flask import jsonify, make_response, redirect, request, send_file, send_from_directory
-import os
-from flask import Flask
-import requests
-import zipfile
 import json
-import base64
-import demucs.api
-import shutil
+import os
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
+
+import requests
+import schedule
+import torch as th
+from flask import Flask
+from flask import jsonify, request, send_file
+
+import demucs.api
+import demucs.separate
 from tools import file_util
 from tools import time_util
-import concurrent.futures
-import demucs.separate
-
-from dora.log import fatal
-import torch as th
-
-import os
-import time
-import schedule
 
 #start cmd
 #uwsgi --ini start.ini
@@ -147,8 +139,7 @@ def fetch_lyrics_file(saveDir, secureName, taskKey, loginToken, device_type):
     
     params = {
         'path':os.path.join(os.getcwd(), saveDir, secureName)
-        }
-    
+    }
     
     res = requests.get(url=local_lyrics_addr,params=params)
     res = res.text.encode('utf-8').decode('unicode_escape')
@@ -202,7 +193,7 @@ def separate():
     
     file = request.files['file']
     
-    isTest = False
+    isTest = True
         
     if isTest:
         taskKey = "test"
@@ -227,11 +218,11 @@ def separate():
     
     if file is None:
         uploadResult["code"] = 0
-        uploadResult[msg] = "No file part"
+        uploadResult["msg"] = "No file part"
         return uploadResult
     if file.filename == '':
         uploadResult["code"] = 0
-        uploadResult[msg] = "No file selected"
+        uploadResult["msg"] = "No file selected"
         return uploadResult
     
     fileNameSplit = os.path.splitext(file.filename)
@@ -263,7 +254,8 @@ def separate():
         TokenKey: loginToken,
         DeviceTypeKey: device_type,
     }
-    notifyStatus(params, headers)
+    resp = notifyStatus(params, headers)
+    print("resp ", f"{resp.text}")
     
     threadPool.submit(separate_file, savePath, taskKey, loginToken, model, twoItem, device_type)
     
@@ -332,6 +324,7 @@ def separate_file(originPath, taskKey, loginToken, model, twoItem, device_type):
 def notifyStatus(params, headers):
     res = requests.get(url=manager_service_address,params=params, headers=headers)
     print(f"manager response ===={res.text}")
+    return res
     
     
     
@@ -348,8 +341,8 @@ def task():
 
 def scheduleDeleteOldFileTask():
     # print("scheduleDeleteOldFileTask start")
-    resulyPath = os.path.join(os.getcwd(), SEPARATE_RESULT_DIR)
-    schedule.every().day.at("00:00").do(file_util.delete_old_items, target_directory= resulyPath)
+    resultPath = os.path.join(os.getcwd(), SEPARATE_RESULT_DIR)
+    schedule.every().day.at("00:00").do(file_util.delete_old_items, target_directory= resultPath)
     # schedule.every().minute.do(file_util.delete_old_items, target_directory= resulyPath)
 
     # 持续运行任务
@@ -369,7 +362,7 @@ if __name__ == '__main__':
     
     # modelName = "htdemucs"
     # stem = "drums"
-    print(f"fullParh")
-    # app.run(port=40000, host='0.0.0.0')
+    # print(f"fullParh")
+    app.run(port=40000, host='0.0.0.0')
     
     # demucs.separate.main(["--mp3", "--two-stems", stem, "-n", modelName, filePath])

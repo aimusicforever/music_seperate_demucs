@@ -1,13 +1,12 @@
 
 
 import base64
-import shutil
-import zipfile
 import os
-import time
-import schedule
 import shutil
-# import day_in_seconds 
+import time
+import zipfile
+
+from tools.time_util import hour_in_seconds
 
 
 def  checkDir(output_dir):
@@ -69,9 +68,8 @@ def delete_old_items(target_directory):
     print("delete old files")
     # 当前时间的时间戳
     now = time.time()
-    # 一天前的时间戳
-    interval = 60
-    one_day_ago = now - interval 
+
+    one_day_ago = now - 3 * hour_in_seconds
 
     # 遍历目标目录的所有子文件和子目录
     for item_name in os.listdir(target_directory):
