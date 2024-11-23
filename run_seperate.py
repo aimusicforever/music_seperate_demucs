@@ -58,7 +58,11 @@ SEPARATE_SUB_DIR = "separated"
 SEPARATE_RESULT_DIR = "separated/result"
 LYRIC_SUB_DIR = "separated/lyrcs"
 
-manager_service_host = "https://music.openai80.com"
+
+OLD_HTTP_URL = "https://music.openai80.com"
+wendu_url = "https://wendumusic.com"
+
+manager_service_host = wendu_url
 update_status_addr = "/api/music/music/status"
 manager_service_address = manager_service_host + update_status_addr
 local_lyrics_addr = "http://127.0.0.1:50000/fetch_file_lyrics"
